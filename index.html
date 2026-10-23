@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ficha Técnica de Mejoramiento de Vivienda · PC Vida Beni</title>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SheetJS para datos y ExcelJS para incrustar fotografías dentro del archivo .xlsx -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", Arial, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    body {
+      display: flex;
+      flex-direction: row;
+    }
+
+    /* =====================================================
+    SIDEBAR
+    ===================================================== */
+    .sidebar {
+      width: 380px;
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      height: 100%;
+      flex-shrink: 0;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.03);
+    }
+
+    #header-logos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+
+    .sidebar-header-title {
+      background: linear-gradient(to right, #003366, #00539f);
+      color: white;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .sidebar-header-title h1 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .sidebar-header-title p {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .sidebar-controls {
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-controls input,
+    .sidebar-controls select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: #fff;
+    }
+
+    .sidebar-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .sidebar-actions button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      color: white;
+    }
+
+    .btn-csv { background: #059669; }
+    .btn-csv:hover { background: #047857; }
+
+    .btn-print { background: #334155; }
+    .btn-print:hover { background: #1e293b; }
+
+    .sidebar-lista {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .item-vivienda {
+      padding: 10px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .item-vivienda:hover {
+      border-color: #00539f;
+      background: #f0f7ff;
+    }
+    .item-vivienda.activo {
+      border-color: #00539f;
+      background: #e0f2fe;
+    }
+
+    /* =====================================================
+    ÁREA PRINCIPAL (MAPA + FICHAS)
+    ===================================================== */
+    .main-content {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: #f4f7fb;
+    }
+
+    .mapa-container {
+      height: 340px;
+      width: 100%;
+      border-bottom: 1px solid #cbd5e1;
+      position: relative;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .contenido-detalle {
+      padding: 20px;
+      max-width: 950px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .ficha {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,.05);
+    }
+
+    .ficha-cab {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 16px 20px;
+      background: #00539f;
+      color: #ffffff;
+      border-left: 6px solid #f26a36;
+    }
+
+    .seccion {
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 16px;
+    }
+    .seccion:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .seccion-titulo {
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: #0b1329;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .seccion-titulo::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 14px;
+      background: #f26a36;
+      border-radius: 2px;
+    }
+
+    .campo .etiqueta {
+      font-weight: 600;
+      color: #64748b;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .3px;
+    }
+    .campo input, .campo select, .campo textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #f8fafc;
+      color: #1e293b;
+      font-size: 0.9rem;
+      margin-top: 2px;
+    }
+    .gps-input {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: #eff6ff !important;
+      border-color: #93c5fd !important;
+    }
+
+    .foto-box {
+      border: 2px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      background: #f8fafc;
+      position: relative;
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .foto-box img {
+      width: 100%;
+      height: 180px;
+      margin-top: 8px;
+      border-radius: 6px;
+      object-fit: contain;
+      background: #eef2f7;
+      border: 1px solid #cbd5e1;
+      display: none;
+      cursor: zoom-in;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .foto-box img.visible { display: block; }
+    .foto-box img:hover { box-shadow: 0 2px 10px #00000020; }
+    .foto-box input[type="file"] { max-width: 100%; }
+    .foto-box .estado-archivo { font-size: .72rem; color: #64748b; margin-top: 5px; overflow-wrap: anywhere; }
+    .visor-foto {
+      display: none; position: fixed; inset: 0; z-index: 99999;
+      background: rgba(15,23,42,.92); align-items: center; justify-content: center; padding: 24px;
+    }
+    .visor-foto.abierto { display: flex; }
+    .visor-foto img { max-width: 95vw; max-height: 90vh; object-fit: contain; background: white; border-radius: 6px; }
+    .visor-foto button { position: absolute; top: 16px; right: 20px; border: 0; border-radius: 8px; padding: 10px 14px; background: white; color: #0f172a; cursor: pointer; font-weight: 700; }
+    @media (max-width: 900px) {
+      body { flex-direction: column; overflow: auto; height: auto; min-height: 100%; }
+      html { height: auto; }
+      .sidebar { width: 100%; height: auto; max-height: 45vh; }
+      .main-content { height: auto; min-height: 55vh; overflow: visible; }
+      .mapa-container { height: 280px; }
+      .contenido-detalle { padding: 10px; }
+      .foto-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important; }
+    }
+
+    .tabla-presupuesto {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: .88rem;
+    }
+    .tabla-presupuesto th, .tabla-presupuesto td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .tabla-presupuesto th {
+      background: #f8fafc;
+      font-size: .78rem;
+      text-transform: uppercase;
+      color: #475569;
+    }
+    .tabla-presupuesto td input {
+      text-align: right;
+      background: #ffffff;
+    }
+    .fila-total {
+      background: #eff6ff;
+      font-weight: 800;
+      color: #0b1329;
+    }
+
+    .firmas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 15px;
+      text-align: center;
+    }
+    .linea-firma {
+      border-top: 1px solid #cbd5e1;
+      margin-top: 30px;
+      padding-top: 6px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+
+    @media print {
+      .sidebar, .mapa-container, button, input[type="file"] {
+        display: none !important;
+      }
+      body {
+        overflow: auto !important;
+      }
+      .main-content {
+        overflow: visible !important;
+      }
+      .ficha {
+        border: none;
+        box-shadow: none;
+      }
+    }
+
+
+    /* RESPONSIVE adicional: celular, tablet y laptop */
+    img, iframe, canvas, svg { max-width: 100%; }
+    input, select, textarea, button { max-width: 100%; }
+    .main-content, .contenido-detalle, .ficha, .seccion { min-width: 0; }
+    .ficha { overflow-wrap: anywhere; }
+    .seccion > div { min-width: 0; }
+    .tabla-presupuesto { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tabla-presupuesto th, .tabla-presupuesto td { white-space: nowrap; }
+    .foto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+    .foto-box { min-width: 0; overflow: hidden; }
+    .foto-box img { width: 100%; height: 180px; object-fit: contain; }
+    .foto-box iframe { display: block; width: 100%; min-height: 240px; border: 1px solid #cbd5e1; }
+    @media (min-width: 901px) and (max-width: 1280px) {
+      .sidebar { width: 300px; }
+      .contenido-detalle { padding: 14px; }
+      .ficha-cab { flex-wrap: wrap; gap: 10px; }
+      .seccion { padding: 14px; }
+    }
+    .mobile-nav { display: none; }
+    @media (max-width: 900px) {
+      html, body { width: 100%; overflow-x: hidden; }
+      body { display: flex; flex-direction: column; }
+      .sidebar { width: 100%; max-height: none; height: auto; flex: 0 0 auto; }
+      .sidebar-lista { max-height: 230px; overflow-y: auto; }
+      .sidebar-actions { flex-wrap: wrap; }
+      .sidebar-actions button { min-width: 130px; }
+      .main-content { width: 100%; min-width: 0; height: auto; display: flex; flex-direction: column; }
+      .mobile-nav { display: flex; position: sticky; top: 0; z-index: 1200; gap: 8px; padding: 8px; background: #fff; border-bottom: 1px solid #cbd5e1; }
+      .mobile-nav button { flex: 1; border: 0; border-radius: 8px; padding: 12px 8px; background: #00539f; color: #fff; font-weight: 700; font-size: 14px; }
+      .mobile-nav button:active { background: #003366; }
+      .mapa-container { width: 100%; height: 250px; flex: 0 0 250px; }
+      body.movil-ver-ficha .mapa-container { display: none; }
+      body.movil-ver-ficha #contenidoDetalle { display: block; }
+      body.movil-ver-mapa .mapa-container { display: block; }
+      body.movil-ver-mapa #contenidoDetalle { display: none; }
+      .contenido-detalle { width: 100%; min-width: 0; padding: 8px; }
+      .ficha-cab { flex-wrap: wrap; align-items: flex-start; padding: 12px; gap: 10px; }
+      .ficha-cab > div { max-width: 100%; }
+      .seccion { padding: 12px; margin-bottom: 12px; }
+      .seccion [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+      .foto-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+      .firmas { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .visor-foto { padding: 10px; }
+      .visor-foto img { max-width: 96vw; max-height: 82vh; }
+    }
+    @media (max-width: 480px) {
+      #header-logos { gap: 8px; padding: 8px; }
+      #header-logos svg { width: 42%; height: auto; }
+      .sidebar-header-title { padding: 10px; }
+      .sidebar-header-title h1 { font-size: .82rem; }
+      .sidebar-controls { padding: 9px; }
+      .sidebar-actions { flex-direction: column; }
+      .sidebar-actions button { width: 100%; }
+      .mapa-container { height: 210px; flex-basis: 210px; }
+      .contenido-detalle { padding: 5px; }
+      .ficha-cab { padding: 10px; }
+      .ficha-cab button { font-size: .78rem !important; }
+      .foto-grid { grid-template-columns: minmax(0, 1fr) !important; }
+      .foto-box img { height: 200px; }
+      .tabla-presupuesto th, .tabla-presupuesto td { padding: 6px; font-size: .76rem; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- BARRA LATERAL (SIDEBAR) -->
+  <aside class="sidebar">
+    <div id="header-logos">
+      <!-- LOGO KOICA -->
+      <svg width="105" height="28" viewBox="0 0 230 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <text x="0" y="38" font-family="'Arial Black', Arial, sans-serif" font-size="42" font-weight="900" fill="#004692" letter-spacing="-1">KOICA</text>
+        <g fill="#004692" transform="translate(138, 15) scale(0.85)">
+          <path d="M 0 14 C 12 12, 30 3, 48 -5 C 36 6, 22 12, 0 14 Z" />
+          <path d="M 10 8 C 18 2, 28 -1, 35 -3 C 28 2, 20 6, 10 8 Z" />
+          <path d="M 20 4 C 28 -1, 38 -3, 45 -6 C 38 -1, 30 2, 20 4 Z" />
+          <path d="M 30 1 C 38 -3, 46 -5, 53 -7 C 46 -3, 38 0, 30 1 Z" />
+          <path d="M 8 15 C 16 18, 26 21, 34 23 C 26 20, 18 18, 8 15 Z" />
+          <path d="M 18 12 C 26 15, 36 17, 44 19 C 36 16, 26 14, 18 12 Z" />
+        </g>
+      </svg>
+
+      <!-- LOGO WORLD VISION -->
+      <svg width="115" height="28" viewBox="0 0 240 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <text x="0" y="36" font-family="'Georgia', 'Times New Roman', serif" font-size="30" font-weight="bold" fill="#221f1f" letter-spacing="-0.5">World Vision</text>
+        <g transform="translate(165, 0)">
+          <path d="M 0 48 C 15 48, 38 28, 55 0 L 55 48 Z" fill="#f26a21" />
+          <path d="M 43 16 L 44.5 11 L 46 16 L 51 17.5 L 46 19 L 44.5 24 L 43 19 L 38 17.5 Z" fill="#ffffff" />
+        </g>
+      </svg>
+    </div>
+
+    <div class="sidebar-header-title">
+      <h1>PC Vida Beni · Riberalta</h1>
+      <p>Fichas Técnicas de Mejoramiento</p>
+    </div>
+
+    <div class="sidebar-controls">
+      <input type="text" id="busqueda" placeholder="Buscar beneficiario o código..." oninput="filtrarGral()" />
+      <select id="filtroBarrio" onchange="filtrarGral()">
+        <option value="">Todos los barrios</option>
+        <option value="Beni">Beni</option>
+        <option value="Bioceanica">Bioceánica</option>
+        <option value="Las Arenas">Las Arenas</option>
+        <option value="La Esperanza">La Esperanza</option>
+        <option value="Popechi">Popechi</option>
+      </select>
+      <div class="sidebar-actions">
+        <button class="btn-csv" onclick="exportarExcel()">📗 Descargar Excel (.xlsx)</button>
+        <button class="btn-csv" onclick="exportarCSV()">📊 Exportar CSV</button>
+        <button class="btn-print" onclick="window.print()">🖨️ Imprimir PDF</button>
+      </div>
+    </div>
+
+    <div class="sidebar-lista" id="sidebarLista"></div>
+  </aside>
+
+  <!-- ÁREA PRINCIPAL: MAPA Y FICHA ACTIVA -->
+  <main class="main-content">
+    <div class="mobile-nav" id="mobileNav">
+      <button type="button" onclick="mostrarVistaMovil('ficha')">📋 Ver ficha técnica</button>
+      <button type="button" onclick="mostrarVistaMovil('mapa')">🗺️ Ver mapa</button>
+    </div>
+    <div id="mapa" class="mapa-container"></div>
+    <p style="margin:6px 12px;color:#475569;font-size:.82rem;">📍 Cada marcador representa una vivienda. Para confirmar su ubicación real, abre su ficha y pulsa <b>“Capturar ubicación GPS de esta vivienda”</b> estando en el domicilio; luego guarda la ficha. Se requiere permiso de ubicación del navegador.</p>
+    <div class="contenido-detalle" id="contenidoDetalle"></div>
+  </main>
+
+<div id="visorFoto" class="visor-foto" role="dialog" aria-modal="true" aria-label="Vista ampliada de fotografía" onclick="cerrarVisorFoto(event)">
+  <button type="button" onclick="cerrarVisorFoto(event)">✕ Cerrar</button>
+  <img id="visorFotoImagen" alt="Fotografía ampliada" />
+</div>
+<script>
+const viviendas = [
+  // --- BENI ---
+  {id:"RIB-001", jefe:"Zuleime Gonzales Medina", integrantes:"4 (1 niño, 3 adolescentes)", celular:"77832849", barrio:"Beni", lat:-11.047551, lon:-66.022334, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Paredes con aberturas amplias y grietas.", obsParedes:"Madera deteriorada", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sellado de aberturas y mallas milimétricas.", encuestador:"Edward Gonçalves", mat:2500, mo:1200, eq:300, gg:250, util:350, imp:400},
+  {id:"RIB-002", jefe:"Gabriela Ortiz Gonzales", integrantes:"4 (2 niños, 1 adolescente)", celular:"76340359", barrio:"Beni", lat:-11.047598, lon:-66.022290, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Aberturas en madera y estancamiento de aguas.", obsParedes:"Aberturas continuas", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Reemplazo parcial de tablillas y mallas.", encuestador:"Edward Gonçalves", mat:2800, mo:1400, eq:350, gg:300, util:400, imp:450},
+  {id:"RIB-003", jefe:"Luzmila Cortez Rivero", integrantes:"3 (1 niño, 1 adolescente)", celular:"68952906", barrio:"Beni", lat:-11.045228, lon:-66.025129, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Paredes inconclusas.", obsParedes:"Brechas abiertas", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Alto", propuesta:"Cierre hermético de paredes.", encuestador:"Edward Gonçalves", mat:2100, mo:1000, eq:250, gg:200, util:300, imp:350},
+  {id:"RIB-004", jefe:"Tatiana Vaca Callau", integrantes:"6", celular:"76861802", barrio:"Beni", lat:-11.046427, lon:-66.024457, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Malo", deficiencias:"Falta de cielo raso.", obsParedes:"Aberturas superiores", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Instalación de cielo raso.", encuestador:"Gabriela Ortiz Rivero", mat:3100, mo:1500, eq:400, gg:350, util:450, imp:500},
+  {id:"RIB-005", jefe:"Alejandra Aparicio Capi", integrantes:"3", celular:"75893725", barrio:"Beni", lat:-11.044850, lon:-66.022629, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Grietas continuas.", obsParedes:"Sustrato desgastado", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Reforzamiento de estructura.", encuestador:"Edward Gonçalves", mat:2300, mo:1100, eq:250, gg:220, util:320, imp:370},
+  {id:"RIB-006", jefe:"Yudith Tapallima Salinas", integrantes:"3", celular:"76123456", barrio:"Beni", lat:-11.048593, lon:-66.025437, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Humedad y aberturas en paredes.", obsParedes:"Madera húmeda", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Mantenimiento general y mallas.", encuestador:"Edward Gonçalves", mat:2200, mo:1000, eq:200, gg:200, util:300, imp:350},
+  {id:"RIB-007", jefe:"Danitza Castro Loras", integrantes:"4", celular:"76123789", barrio:"Beni", lat:-11.045231, lon:-66.025125, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Ventilación sin protección.", obsParedes:"Aceptable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Instalación de mallas milimétricas.", encuestador:"Gabriela Ortiz Rivero", mat:2000, mo:900, eq:200, gg:180, util:250, imp:300},
+
+  // --- BIOCEÁNICA ---
+  {id:"RIB-008", jefe:"Teofila Dora Maita Gavincha", integrantes:"2", celular:"64231994", barrio:"Bioceanica", lat:-11.052340, lon:-66.038000, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Grietas y falta de protección.", obsParedes:"Madera frágil", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Mejora integral de cerramientos.", encuestador:"Abigail Geronimo", mat:2400, mo:1100, eq:200, gg:200, util:300, imp:350},
+  {id:"RIB-009", jefe:"Karla Paola Prado Vaca", integrantes:"3", celular:"76133445", barrio:"Bioceanica", lat:-11.053448, lon:-66.035796, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Aberturas en puertas y ventanas.", obsParedes:"Desgaste", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sellado y colocación de mallas.", encuestador:"Abigail Geronimo", mat:2300, mo:1050, eq:200, gg:190, util:290, imp:330},
+  {id:"RIB-010", jefe:"Maria Cristina Marupa", integrantes:"4", celular:"76144556", barrio:"Bioceanica", lat:-11.054974, lon:-66.039835, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Falta de cielo raso.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Instalación de cielo raso y mallas.", encuestador:"Abigail Geronimo", mat:2500, mo:1200, eq:220, gg:210, util:310, imp:360},
+  {id:"RIB-011", jefe:"Carla Daniela Castedo Apuri", integrantes:"3", celular:"76155667", barrio:"Bioceanica", lat:-11.052187, lon:-66.037835, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Paredes deterioradas.", obsParedes:"Humedad", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Refacción de paneles.", encuestador:"Abigail Geronimo", mat:2600, mo:1250, eq:250, gg:220, util:320, imp:370},
+  {id:"RIB-012", jefe:"Silia Achipe", integrantes:"2", celular:"76166778", barrio:"Bioceanica", lat:-11.048310, lon:-66.035790, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Regular", deficiencias:"Aberturas menores.", obsParedes:"Regular", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Sellado de juntas.", encuestador:"Abigail Geronimo", mat:1900, mo:900, eq:180, gg:150, util:250, imp:280},
+  {id:"RIB-013", jefe:"Yarima Ojopi Rivera", integrantes:"4", celular:"76177889", barrio:"Bioceanica", lat:-11.050789, lon:-66.034238, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Malo", deficiencias:"Humedad y vectores.", obsParedes:"Deterioro", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sustitución de techos y mallas.", encuestador:"Abigail Geronimo", mat:2800, mo:1300, eq:300, gg:250, util:350, imp:400},
+  {id:"RIB-014", jefe:"Wendy Itamiza Caro", integrantes:"3", celular:"76188990", barrio:"Bioceanica", lat:-11.049995, lon:-66.035750, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Regular", deficiencias:"Ventilación sin protección.", obsParedes:"Aceptable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Instalación de mallas milimétricas.", encuestador:"Abigail Geronimo", mat:2100, mo:1000, eq:200, gg:190, util:280, imp:320},
+
+  // --- LAS ARENAS ---
+  {id:"RIB-015", jefe:"Rosmery Racua Eredia", integrantes:"2", celular:"73152910", barrio:"Las Arenas", lat:-11.026515, lon:-66.022195, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Exposición a vectores.", obsParedes:"Desgaste", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Colocación de mallas y sellado.", encuestador:"Gabriela Ortiz Rivero", mat:2600, mo:1200, eq:250, gg:230, util:330, imp:380},
+  {id:"RIB-016", jefe:"Ariel Loayza Medina", integrantes:"4", celular:"73153000", barrio:"Las Arenas", lat:-11.024814, lon:-66.023175, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Aberturas en paredes.", obsParedes:"Madera seca", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Sellado de rendijas.", encuestador:"Gabriela Ortiz Rivero", mat:2200, mo:1000, eq:200, gg:190, util:280, imp:320},
+  {id:"RIB-017", jefe:"Cleyder Yanama Juanero", integrantes:"3", celular:"73154000", barrio:"Las Arenas", lat:-11.025543, lon:-66.023838, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Humedad y aberturas.", obsParedes:"Deterioro", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Refacción de estructura y mallas.", encuestador:"Gabriela Ortiz Rivero", mat:2500, mo:1200, eq:220, gg:210, util:310, imp:360},
+  {id:"RIB-018", jefe:"Ricardo Antelo Peralta", integrantes:"5", celular:"73155000", barrio:"Las Arenas", lat:-11.025904, lon:-66.023921, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Falta de cielo raso.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Colocación de cielo raso.", encuestador:"Gabriela Ortiz Rivero", mat:2400, mo:1100, eq:200, gg:200, util:300, imp:350},
+  {id:"RIB-019", jefe:"Raquel Sanjinara Rivera", integrantes:"2", celular:"73156000", barrio:"Las Arenas", lat:-11.025076, lon:-66.022937, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Grietas amplias.", obsParedes:"Desgaste", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sustitución de tablas.", encuestador:"Gabriela Ortiz Rivero", mat:2300, mo:1050, eq:200, gg:190, util:290, imp:330},
+  {id:"RIB-020", jefe:"Mary Maricruz Quereguary Vaca", integrantes:"4", celular:"73157000", barrio:"Las Arenas", lat:-11.024232, lon:-66.024440, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Malo", deficiencias:"Aberturas y humedad.", obsParedes:"Deterioro", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Mejora general y mallas.", encuestador:"Gabriela Ortiz Rivero", mat:2700, mo:1250, eq:250, gg:220, util:320, imp:370},
+  {id:"RIB-021", jefe:"Yesenia Quereguary Tarifa", integrantes:"3", celular:"73158000", barrio:"Las Arenas", lat:-11.024883, lon:-66.024201, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Regular", deficiencias:"Ventanas sin protección.", obsParedes:"Aceptable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Instalación de mallas milimétricas.", encuestador:"Gabriela Ortiz Rivero", mat:2000, mo:950, eq:180, gg:170, util:250, imp:290},
+
+  // --- LA ESPERANZA ---
+  {id:"RIB-022", jefe:"Ana Loayza Chamaro", integrantes:"5", celular:"73969539", barrio:"La Esperanza", lat:-11.064673, lon:-66.054471, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Malo", deficiencias:"Humedad y aberturas.", obsParedes:"Deterioro avanzado", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sustitución de paneles dañados.", encuestador:"Nicia Steffy Herrera", mat:3200, mo:1600, eq:400, gg:300, util:450, imp:500},
+  {id:"RIB-023", jefe:"Sandra Cuajera Nacua", integrantes:"3", celular:"73970000", barrio:"La Esperanza", lat:-11.065010, lon:-66.055553, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Aberturas en paredes.", obsParedes:"Madera frágil", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sellado y mallas milimétricas.", encuestador:"Nicia Steffy Herrera", mat:2500, mo:1100, eq:220, gg:210, util:310, imp:360},
+  {id:"RIB-024", jefe:"Juan Carlos Quispe Nari", integrantes:"4", celular:"73971000", barrio:"La Esperanza", lat:-11.064038, lon:-66.053517, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Falta de cielo raso.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Instalación de cielo raso.", encuestador:"Nicia Steffy Herrera", mat:2400, mo:1100, eq:200, gg:200, util:300, imp:350},
+  {id:"RIB-025", jefe:"Magdalena Chao Pizango", integrantes:"2", celular:"73972000", barrio:"La Esperanza", lat:-11.064982, lon:-66.054996, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Exposición a vectores.", obsParedes:"Desgaste", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Colocación de mallas y sellado.", encuestador:"Nicia Steffy Herrera", mat:2300, mo:1050, eq:200, gg:190, util:290, imp:330},
+  {id:"RIB-026", jefe:"Francisco Ramírez Hurtado", integrantes:"4", celular:"73973000", barrio:"La Esperanza", lat:-11.065818, lon:-66.055553, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:3, estadoGeneral:"Malo", deficiencias:"Humedad y aberturas.", obsParedes:"Deterioro", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sustitución de techos y paneles.", encuestador:"Nicia Steffy Herrera", mat:2800, mo:1300, eq:300, gg:250, util:350, imp:400},
+  {id:"RIB-027", jefe:"Freddy Melgar Dos Santos", integrantes:"3", celular:"73974000", barrio:"La Esperanza", lat:-11.066138, lon:-66.055328, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Regular", deficiencias:"Ventanas sin protección.", obsParedes:"Aceptable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"No", nivelRiesgo:"Medio", propuesta:"Instalación de mallas milimétricas.", encuestador:"Nicia Steffy Herrera", mat:2100, mo:1000, eq:200, gg:190, util:280, imp:320},
+  {id:"RIB-028", jefe:"Lidia Viera Terrazas", integrantes:"3", celular:"73975000", barrio:"La Esperanza", lat:-11.064322, lon:-66.053074, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Grietas amplias en paredes.", obsParedes:"Madera deteriorada", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Reforzamiento y sellado.", encuestador:"Nicia Steffy Herrera", mat:2400, mo:1100, eq:200, gg:200, util:300, imp:350},
+
+  // --- POPECHI ---
+  {id:"RIB-029", jefe:"Jorge Octavio Nava Dumay", integrantes:"3", celular:"76884406", barrio:"Popechi", lat:-11.130190, lon:-66.073520, piso:"Ladrillo", paredes:"Ladrillo", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Falta de cielo raso.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Instalación de mallas milimétricas.", encuestador:"Nicia Steffy Herrera", mat:2200, mo:1000, eq:200, gg:200, util:280, imp:320},
+  {id:"RIB-030", jefe:"Carmelo Sánchez Chao", integrantes:"4", celular:"76884500", barrio:"Popechi", lat:-11.130788, lon:-66.073131, piso:"Ladrillo", paredes:"Ladrillo", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Ventilación sin protección.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Instalación de mallas milimétricas.", encuestador:"Nicia Steffy Herrera", mat:2300, mo:1050, eq:200, gg:190, util:290, imp:330},
+  {id:"RIB-031", jefe:"Frida Alcides Pacamia Marcos", integrantes:"3", celular:"76884600", barrio:"Popechi", lat:-11.133478, lon:-66.073584, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Aberturas en paredes de madera.", obsParedes:"Desgaste", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Sellado de aberturas y mallas.", encuestador:"Nicia Steffy Herrera", mat:2400, mo:1100, eq:200, gg:200, util:300, imp:350},
+  {id:"RIB-032", jefe:"Juan Ronaldo Morris Isla", integrantes:"5", celular:"76884700", barrio:"Popechi", lat:-11.128574, lon:-66.074791, piso:"Ladrillo", paredes:"Ladrillo", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Falta de cielo raso.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Instalación de mallas milimétricas.", encuestador:"Nicia Steffy Herrera", mat:2500, mo:1200, eq:220, gg:210, util:310, imp:360},
+  {id:"RIB-033", jefe:"Luis Arnezana Cortez", integrantes:"3", celular:"76884800", barrio:"Popechi", lat:-11.131591, lon:-66.073430, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Humedad y aberturas.", obsParedes:"Deterioro", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Refacción de paneles y mallas.", encuestador:"Nicia Steffy Herrera", mat:2300, mo:1050, eq:200, gg:190, util:290, imp:330},
+  {id:"RIB-034", jefe:"Ada Luisa Yuvasera Amacifen", integrantes:"4", celular:"76884900", barrio:"Popechi", lat:-11.131090, lon:-66.071988, piso:"Ladrillo", paredes:"Ladrillo", techo:"Calamina", ambientes:3, estadoGeneral:"Regular", deficiencias:"Ventanas sin protección.", obsParedes:"Estable", aberturas:"Sí", estadoTecho:"Regular", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Colocación de mallas milimétricas.", encuestador:"Nicia Steffy Herrera", mat:2100, mo:1000, eq:200, gg:180, util:270, imp:310},
+  {id:"RIB-035", jefe:"Nelson Mendoza Maita", integrantes:"2", celular:"76885000", barrio:"Popechi", lat:-11.132477, lon:-66.073582, piso:"Tierra", paredes:"Madera", techo:"Calamina", ambientes:2, estadoGeneral:"Malo", deficiencias:"Paredes con aberturas amplias.", obsParedes:"Madera frágil", aberturas:"Sí", estadoTecho:"Malo", ventanasSinMalla:"Sí", aguaAlrededor:"Sí", nivelRiesgo:"Alto", propuesta:"Mejora integral de cerramientos.", encuestador:"Nicia Steffy Herrera", mat:2600, mo:1200, eq:250, gg:220, util:320, imp:370}
+];
+
+const coloresBarrio = {
+  "Beni": "#00539f",
+  "Bioceanica": "#f26a36",
+  "Las Arenas": "#3b82f6",
+  "La Esperanza": "#10b981",
+  "Popechi": "#8b5cf6"
+};
+
+const map = L.map('mapa').setView([-11.06, -66.04], 13);
+const sateliteImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
+const callesOverlay = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
+L.layerGroup([sateliteImg, callesOverlay]).addTo(map);
+
+let arrayMarcadores = {};
+let idViviendaActiva = viviendas[0].id;
+
+function obtenerDatosGuardados(v) {
+  const guardadoGPS = localStorage.getItem(`gps_${v.id}`);
+  let lat = v.lat;
+  let lon = v.lon;
+  if (guardadoGPS) {
+    try {
+      const objGPS = JSON.parse(guardadoGPS);
+      lat = parseFloat(objGPS.lat);
+      lon = parseFloat(objGPS.lon);
+    } catch(e) {}
+  }
+
+  const guardadoCampos = localStorage.getItem(`campos_${v.id}`);
+  let c = {
+    id: v.id, jefe: v.jefe, integrantes: v.integrantes, celular: v.celular, barrio: v.barrio,
+    piso: v.piso, paredes: v.paredes, techo: v.techo, ambientes: v.ambientes, estadoGeneral: v.estadoGeneral,
+    deficiencias: v.deficiencias, obsParedes: v.obsParedes, aberturas: v.aberturas, estadoTecho: v.estadoTecho,
+    ventanasSinMalla: v.ventanasSinMalla, aguaAlrededor: v.aguaAlrededor, nivelRiesgo: v.nivelRiesgo, propuesta: v.propuesta
+  };
+  if (guardadoCampos) { try { c = JSON.parse(guardadoCampos); } catch(e) {} }
+
+  const guardadoPresup = localStorage.getItem(`presupuesto_${v.id}`);
+  let p = { mat: v.mat, mo: v.mo, eq: v.eq, gg: v.gg, util: v.util, imp: v.imp };
+  if (guardadoPresup) { try { p = JSON.parse(guardadoPresup); } catch(e) {} }
+
+  return { lat, lon, c, p };
+}
+
+function mostrarVistaMovil(vista) {
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    document.body.classList.toggle('movil-ver-ficha', vista === 'ficha');
+    document.body.classList.toggle('movil-ver-mapa', vista === 'mapa');
+    if (vista === 'mapa') setTimeout(() => map.invalidateSize(), 150);
+    if (vista === 'ficha') setTimeout(() => document.getElementById('contenidoDetalle').scrollIntoView({behavior:'smooth', block:'start'}), 50);
+  }
+}
+
+function seleccionarVivienda(id) {
+  idViviendaActiva = id;
+  filtrarGral();
+  const v = viviendas.find(item => item.id === id);
+  if (v) {
+    const datos = obtenerDatosGuardados(v);
+    map.setView([datos.lat, datos.lon], 16);
+    if (arrayMarcadores[id]) {
+      arrayMarcadores[id].openPopup();
+    }
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      mostrarVistaMovil('ficha');
+      setTimeout(() => document.getElementById('contenidoDetalle').scrollIntoView({behavior:'smooth', block:'start'}), 100);
+    }
+  }
+}
+
+function renderizarSidebar(lista) {
+  const cont = document.getElementById("sidebarLista");
+  cont.innerHTML = "";
+
+  lista.forEach(v => {
+    const datos = obtenerDatosGuardados(v);
+    const activa = v.id === idViviendaActiva ? "activo" : "";
+    const div = document.createElement("div");
+    div.className = `item-vivienda ${activa}`;
+    div.onclick = () => seleccionarVivienda(v.id);
+    div.innerHTML = `
+      <div style="font-weight: 700; font-size: 0.85rem; color: #00539f;">${datos.c.jefe}</div>
+      <div style="font-size: 0.75rem; color: #64748b; display: flex; justify-content: space-between; margin-top: 2px;">
+        <span>ID: <b>${datos.c.id}</b></span>
+        <span>Barrio: ${datos.c.barrio}</span>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+}
+
+function actualizarMapa(lista) {
+  Object.values(arrayMarcadores).forEach(m => map.removeLayer(m));
+  arrayMarcadores = {};
+
+  lista.forEach(v => {
+    const datos = obtenerDatosGuardados(v);
+    const colorHex = coloresBarrio[datos.c.barrio] || "#00539f";
+    const marker = L.circleMarker([datos.lat, datos.lon], {
+      radius: v.id === idViviendaActiva ? 12 : 8,
+      fillColor: colorHex,
+      color: "#ffffff",
+      weight: 2.5,
+      opacity: 1,
+      fillOpacity: 0.95
+    });
+
+    marker.bindPopup(`
+      <div style="font-size:.85rem; line-height:1.4;">
+        <strong style="color:#00539f;">${datos.c.jefe}</strong><br>
+        <span>ID: <b>${datos.c.id}</b></span><br>
+        <span>Barrio: <b>${datos.c.barrio}</b></span><br>
+        <span>Lat: ${datos.lat.toFixed(5)}, Lon: ${datos.lon.toFixed(5)}</span><br>
+        <button onclick="seleccionarVivienda('${v.id}')" style="margin-top:6px; background:#00539f; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">Ver Ficha Técnica</button>
+      </div>
+    `);
+
+    marker.on('click', () => seleccionarVivienda(v.id));
+    marker.addTo(map);
+    arrayMarcadores[v.id] = marker;
+  });
+}
+
+function cargarVistaPrevia(idVivienda, tipo) {
+  const dataUrl = localStorage.getItem(`foto_${idVivienda}_${tipo}`);
+  const imgEl = document.getElementById(`img_${idVivienda}_${tipo}`);
+  const pdfEl = document.getElementById(`pdf_${idVivienda}_${tipo}`);
+  const pdfViewEl = document.getElementById(`visorPdf_${idVivienda}_${tipo}`);
+  const btnEl = document.getElementById(`btn_${idVivienda}_${tipo}`);
+  const phEl = document.getElementById(`ph_${idVivienda}_${tipo}`);
+  if (!imgEl || !pdfEl || !phEl) return;
+
+  if (dataUrl) {
+    if (dataUrl.startsWith('data:application/pdf')) {
+      imgEl.removeAttribute('src');
+      imgEl.classList.remove('visible');
+      imgEl.style.display = 'none';
+      pdfEl.href = dataUrl;
+      pdfEl.style.display = 'inline-block';
+      pdfEl.textContent = '📄 Abrir PDF en otra pestaña';
+      if (pdfViewEl) { pdfViewEl.src = dataUrl + '#toolbar=1&navpanes=0&scrollbar=1'; pdfViewEl.style.display = 'block'; }
+      phEl.style.display = 'none';
+    } else {
+      pdfEl.style.display = 'none';
+      if (pdfViewEl) { pdfViewEl.removeAttribute('src'); pdfViewEl.style.display = 'none'; }
+      imgEl.onload = () => { imgEl.style.display = 'block'; imgEl.classList.add('visible'); };
+      imgEl.onerror = () => {
+        imgEl.style.display = 'none'; imgEl.classList.remove('visible');
+        phEl.textContent = 'No se pudo mostrar la imagen. Vuelve a subirla.';
+        phEl.style.display = 'block';
+      };
+      imgEl.src = dataUrl;
+      imgEl.onclick = () => abrirImagenCompleta(dataUrl);
+      // Si ya está en caché, asegurar que se muestre igualmente.
+      if (imgEl.complete && imgEl.naturalWidth > 0) {
+        imgEl.style.display = 'block'; imgEl.classList.add('visible');
+      }
+      phEl.style.display = 'none';
+    }
+    if (btnEl) btnEl.style.display = 'inline-block';
+  } else {
+    imgEl.removeAttribute('src');
+    imgEl.style.display = 'none';
+    imgEl.classList.remove('visible');
+    pdfEl.removeAttribute('href');
+    pdfEl.style.display = 'none';
+    if (pdfViewEl) { pdfViewEl.removeAttribute('src'); pdfViewEl.style.display = 'none'; }
+    if (btnEl) btnEl.style.display = 'none';
+    phEl.textContent = 'Sin archivo';
+    phEl.style.display = 'block';
+  }
+}
+
+function abrirImagenCompleta(url) {
+  const visor = document.getElementById('visorFoto');
+  const imagen = document.getElementById('visorFotoImagen');
+  if (visor && imagen) {
+    imagen.src = url;
+    visor.classList.add('abierto');
+  } else {
+    const win = window.open();
+    if (win) win.document.write(`<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto">`);
+  }
+}
+
+function cerrarVisorFoto(event) {
+  if (event) event.stopPropagation();
+  const visor = document.getElementById('visorFoto');
+  const imagen = document.getElementById('visorFotoImagen');
+  if (visor) visor.classList.remove('abierto');
+  if (imagen) imagen.src = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarVisorFoto(e); });
+
+function guardarArchivo(event, idVivienda, tipo) {
+  const archivo = event.target.files && event.target.files[0];
+  if (!archivo) return;
+  const clave = `foto_${idVivienda}_${tipo}`;
+  const input = event.target;
+  const phEl = document.getElementById(`ph_${idVivienda}_${tipo}`);
+  const imgEl = document.getElementById(`img_${idVivienda}_${tipo}`);
+  const pdfEl = document.getElementById(`pdf_${idVivienda}_${tipo}`);
+  const btnEl = document.getElementById(`btn_${idVivienda}_${tipo}`);
+
+  if (archivo.size > 15 * 1024 * 1024) {
+    alert('El archivo supera 15 MB. Reduce su tamaño e intenta nuevamente.');
+    input.value = '';
+    return;
+  }
+
+  if (archivo.type === 'application/pdf' || archivo.name.toLowerCase().endsWith('.pdf')) {
+    const lector = new FileReader();
+    lector.onerror = () => alert('No se pudo leer el PDF. Intenta nuevamente.');
+    lector.onload = e => {
+      const dataUrl = e.target.result;
+      // Mostrar el PDF en pantalla inmediatamente.
+      const pdfPreview = document.getElementById(`visorPdf_${idVivienda}_${tipo}`);
+      const pdfLink = document.getElementById(`pdf_${idVivienda}_${tipo}`);
+      const imgPreview = document.getElementById(`img_${idVivienda}_${tipo}`);
+      const placeholder = document.getElementById(`ph_${idVivienda}_${tipo}`);
+      const deleteButton = document.getElementById(`btn_${idVivienda}_${tipo}`);
+      if (pdfPreview) { pdfPreview.src = dataUrl + '#toolbar=1&navpanes=0&scrollbar=1'; pdfPreview.style.display = 'block'; }
+      if (pdfLink) { pdfLink.href = dataUrl; pdfLink.style.display = 'inline-block'; pdfLink.textContent = '📄 Abrir PDF en otra pestaña'; }
+      if (imgPreview) { imgPreview.removeAttribute('src'); imgPreview.style.display = 'none'; imgPreview.classList.remove('visible'); }
+      if (placeholder) placeholder.style.display = 'none';
+      if (deleteButton) deleteButton.style.display = 'inline-block';
+      try {
+        localStorage.setItem(clave, dataUrl);
+      } catch (err) {
+        alert('El PDF se muestra en esta sesión, pero el navegador no tiene espacio suficiente para guardarlo. Prueba con un PDF más pequeño o elimina archivos antiguos.');
+      }
+    };
+    lector.readAsDataURL(archivo);
+    return;
+  }
+
+  if (!archivo.type.startsWith('image/')) {
+    alert('Selecciona una imagen o un archivo PDF.');
+    input.value = '';
+    return;
+  }
+
+  const lector = new FileReader();
+  lector.onerror = () => alert('No se pudo leer la imagen. Intenta nuevamente.');
+  lector.onload = e => {
+    const imagenTemporal = new Image();
+    imagenTemporal.onerror = () => alert('El archivo seleccionado no se pudo interpretar como imagen.');
+    imagenTemporal.onload = () => {
+      const max = 1200;
+      let w = imagenTemporal.naturalWidth;
+      let h = imagenTemporal.naturalHeight;
+      const escala = Math.min(1, max / Math.max(w, h));
+      w = Math.max(1, Math.round(w * escala));
+      h = Math.max(1, Math.round(h * escala));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imagenTemporal, 0, 0, w, h);
+      // Vista inmediata, incluso antes de confirmar el guardado permanente.
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.68);
+      if (imgEl) {
+        imgEl.src = dataUrl;
+        imgEl.style.display = 'block';
+        imgEl.classList.add('visible');
+        imgEl.onclick = () => abrirImagenCompleta(dataUrl);
+      }
+      if (pdfEl) pdfEl.style.display = 'none';
+      if (phEl) phEl.style.display = 'none';
+      if (btnEl) btnEl.style.display = 'inline-block';
+      try {
+        localStorage.setItem(clave, dataUrl);
+        if (phEl) phEl.style.display = 'none';
+      } catch (err) {
+        if (phEl) {
+          phEl.textContent = 'Vista previa visible, pero el navegador no tiene espacio para guardarla. Elimina archivos antiguos o usa otro navegador.';
+          phEl.style.display = 'block';
+        }
+        alert('La foto se muestra, pero no pudo guardarse porque el almacenamiento del navegador está lleno. Elimina archivos antiguos o usa una imagen más pequeña.');
+      }
+    };
+    imagenTemporal.src = e.target.result;
+  };
+  lector.readAsDataURL(archivo);
+}
+function eliminarArchivo(idVivienda, tipo) {
+  localStorage.removeItem(`foto_${idVivienda}_${tipo}`);
+  const img = document.getElementById(`img_${idVivienda}_${tipo}`);
+  const input = img && img.parentElement ? img.parentElement.querySelector('input[type="file"]') : null;
+  if (input) input.value = '';
+  cargarVistaPrevia(idVivienda, tipo);
+}
+
+function calcularTotal(id) {
+  const mat = parseFloat(document.getElementById(`mat_${id}`).value) || 0;
+  const mo = parseFloat(document.getElementById(`mo_${id}`).value) || 0;
+  const eq = parseFloat(document.getElementById(`eq_${id}`).value) || 0;
+  const gg = parseFloat(document.getElementById(`gg_${id}`).value) || 0;
+  const util = parseFloat(document.getElementById(`util_${id}`).value) || 0;
+  const imp = parseFloat(document.getElementById(`imp_${id}`).value) || 0;
+  const total = mat + mo + eq + gg + util + imp;
+  document.getElementById(`total_${id}`).innerText = total.toFixed(2) + " Bs.";
+}
+
+function capturarGPS(idVivienda) {
+  if (!navigator.geolocation) {
+    alert("Este navegador no permite obtener la ubicación GPS. Puedes introducir latitud y longitud manualmente.");
+    return;
+  }
+  if (!window.isSecureContext && location.hostname !== "localhost") {
+    alert("Para capturar GPS, abre esta ficha mediante HTTPS (por ejemplo, publicada en Google Apps Script) y permite el acceso a la ubicación.");
+    return;
+  }
+  const boton = document.querySelector(`button[onclick="capturarGPS('${idVivienda}')"]`);
+  if (boton) { boton.disabled = true; boton.textContent = "📡 Obteniendo ubicación..."; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const latInput = document.getElementById(`lat_${idVivienda}`);
+    const lonInput = document.getElementById(`lon_${idVivienda}`);
+    if (latInput) latInput.value = lat.toFixed(7);
+    if (lonInput) lonInput.value = lon.toFixed(7);
+    const v = viviendas.find(item => item.id === idVivienda);
+    if (v) { v.lat = lat; v.lon = lon; }
+    localStorage.setItem(`gps_${idVivienda}`, JSON.stringify({lat, lon, precision: pos.coords.accuracy, capturado: new Date().toISOString()}));
+    filtrarGral();
+    map.setView([lat, lon], 18);
+    if (arrayMarcadores[idVivienda]) arrayMarcadores[idVivienda].openPopup();
+    if (boton) { boton.disabled = false; boton.textContent = "📍 Capturar ubicación GPS de esta vivienda"; }
+    alert(`Ubicación GPS guardada para ${idVivienda}. Precisión aproximada: ${Math.round(pos.coords.accuracy)} metros. Pulsa “Guardar Ficha” para guardar también los demás cambios.`);
+  }, err => {
+    let mensaje = "No se pudo obtener la ubicación.";
+    if (err.code === 1) mensaje = "Permiso de ubicación denegado. Activa la ubicación para este sitio en el navegador.";
+    if (err.code === 2) mensaje = "La ubicación no está disponible. Activa el GPS o inténtalo en un lugar con mejor señal.";
+    if (err.code === 3) mensaje = "La solicitud de ubicación tardó demasiado. Inténtalo nuevamente.";
+    alert(mensaje);
+    if (boton) { boton.disabled = false; boton.textContent = "📍 Capturar ubicación GPS de esta vivienda"; }
+  }, {enableHighAccuracy:true, timeout:20000, maximumAge:0});
+}
+
+function guardarFicha(idVivienda) {
+  const v = viviendas.find(item => item.id === idVivienda);
+  if (!v) return;
+
+  const mat = parseFloat(document.getElementById(`mat_${idVivienda}`).value) || 0;
+  const mo = parseFloat(document.getElementById(`mo_${idVivienda}`).value) || 0;
+  const eq = parseFloat(document.getElementById(`eq_${idVivienda}`).value) || 0;
+  const gg = parseFloat(document.getElementById(`gg_${idVivienda}`).value) || 0;
+  const util = parseFloat(document.getElementById(`util_${idVivienda}`).value) || 0;
+  const imp = parseFloat(document.getElementById(`imp_${idVivienda}`).value) || 0;
+  localStorage.setItem(`presupuesto_${idVivienda}`, JSON.stringify({ mat, mo, eq, gg, util, imp }));
+
+  const nuevaLat = parseFloat(document.getElementById(`lat_${idVivienda}`).value);
+  const nuevaLon = parseFloat(document.getElementById(`lon_${idVivienda}`).value);
+  if (!isNaN(nuevaLat) && !isNaN(nuevaLon)) {
+    v.lat = nuevaLat;
+    v.lon = nuevaLon;
+    localStorage.setItem(`gps_${idVivienda}`, JSON.stringify({ lat: nuevaLat, lon: nuevaLon }));
+  }
+
+  const camposObj = {
+    id: document.getElementById(`id_${idVivienda}`).value,
+    jefe: document.getElementById(`jefe_${idVivienda}`).value,
+    integrantes: document.getElementById(`integrantes_${idVivienda}`).value,
+    celular: document.getElementById(`celular_${idVivienda}`).value,
+    barrio: document.getElementById(`barrio_${idVivienda}`).value,
+    piso: document.getElementById(`piso_${idVivienda}`).value,
+    paredes: document.getElementById(`paredes_${idVivienda}`).value,
+    techo: document.getElementById(`techo_${idVivienda}`).value,
+    ambientes: parseInt(document.getElementById(`amb_${idVivienda}`).value) || 1,
+    estadoGeneral: document.getElementById(`estGen_${idVivienda}`).value,
+    deficiencias: document.getElementById(`def_${idVivienda}`).value,
+    obsParedes: document.getElementById(`obsPar_${idVivienda}`).value,
+    aberturas: document.getElementById(`ab_${idVivienda}`).value,
+    estadoTecho: document.getElementById(`estTecho_${idVivienda}`).value,
+    ventanasSinMalla: document.getElementById(`ven_${idVivienda}`).value,
+    aguaAlrededor: document.getElementById(`agua_${idVivienda}`).value,
+    nivelRiesgo: document.getElementById(`riesgo_${idVivienda}`).value,
+    propuesta: document.getElementById(`prop_${idVivienda}`).value
+  };
+  localStorage.setItem(`campos_${idVivienda}`, JSON.stringify(camposObj));
+
+  filtrarGral();
+  map.setView([nuevaLat, nuevaLon], 16);
+  alert(`✅ Ficha técnica ${idVivienda} guardada y actualizada correctamente.`);
+}
+
+function renderizarFichaActiva() {
+  const v = viviendas.find(item => item.id === idViviendaActiva) || viviendas[0];
+  const datos = obtenerDatosGuardados(v);
+  const c = datos.c;
+  const p = datos.p;
+  const validacion = obtenerValidacion(v);
+  const totalGeneral = (p.mat + p.mo + p.eq + p.gg + p.util + p.imp).toFixed(2);
+  
+  const cont = document.getElementById("contenidoDetalle");
+  cont.innerHTML = `
+    <div class="ficha">
+      <div class="ficha-cab">
+        <div>
+          <div style="font-size: 1.15rem; font-weight: bold;">${c.jefe}</div>
+          <div style="font-size: 0.8rem; opacity: 0.9;">Barrio: ${c.barrio} · Tel: ${c.celular}</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button onclick="guardarFicha('${v.id}')" style="background:#059669; color:white; border:none; font-weight:bold; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem;">💾 Guardar Ficha</button>
+          <span style="background:#f26a36; color:white; font-weight:extrabold; padding:4px 10px; border-radius:20px; font-size:0.85rem;">${c.id}</span>
+        </div>
+      </div>
+
+      <div style="padding: 20px;">
+        <!-- 1. Datos Generales -->
+        <div class="seccion">
+          <div class="seccion-titulo">1. Datos Generales</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div class="campo"><div class="etiqueta">Código de vivienda</div><input type="text" id="id_${v.id}" value="${c.id}"></div>
+            <div class="campo"><div class="etiqueta">Nombre del jefe(a) de hogar</div><input type="text" id="jefe_${v.id}" value="${c.jefe}"></div>
+            <div class="campo"><div class="etiqueta">Número de integrantes</div><input type="text" id="integrantes_${v.id}" value="${c.integrantes}"></div>
+            <div class="campo"><div class="etiqueta">Teléfono de contacto</div><input type="text" id="celular_${v.id}" value="${c.celular}"></div>
+            <div class="campo"><div class="etiqueta">Barrio/Comunidad</div><input type="text" id="barrio_${v.id}" value="${c.barrio}"></div>
+            <div class="campo"><div class="etiqueta">Latitud GPS</div><input type="number" step="any" id="lat_${v.id}" value="${datos.lat}" class="gps-input"></div>
+            <div class="campo"><div class="etiqueta">Longitud GPS</div><input type="number" step="any" id="lon_${v.id}" value="${datos.lon}" class="gps-input"></div>
+            <div class="campo" style="display:flex;align-items:end;">
+              <button type="button" onclick="capturarGPS('${v.id}')" style="width:100%;background:#00539f;color:white;border:0;border-radius:7px;padding:10px 12px;font-weight:700;cursor:pointer;">📍 Capturar ubicación GPS de esta vivienda</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Características de la Vivienda -->
+        <div class="seccion">
+          <div class="seccion-titulo">2. Características de la Vivienda</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div class="campo"><div class="etiqueta">Material de piso</div><input type="text" id="piso_${v.id}" value="${c.piso}"></div>
+            <div class="campo"><div class="etiqueta">Material de paredes</div><input type="text" id="paredes_${v.id}" value="${c.paredes}"></div>
+            <div class="campo"><div class="etiqueta">Material de techo</div><input type="text" id="techo_${v.id}" value="${c.techo}"></div>
+            <div class="campo"><div class="etiqueta">Número de ambientes</div><input type="number" id="amb_${v.id}" value="${c.ambientes}"></div>
+            <div class="campo">
+              <div class="etiqueta">Estado general de la vivienda</div>
+              <select id="estGen_${v.id}">
+                <option value="Bueno" ${c.estadoGeneral==='Bueno'?'selected':''}>Bueno</option>
+                <option value="Regular" ${c.estadoGeneral==='Regular'?'selected':''}>Regular</option>
+                <option value="Malo" ${c.estadoGeneral==='Malo'?'selected':''}>Malo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Registro Fotográfico -->
+        <div class="seccion">
+          <div class="seccion-titulo">3. Registro Fotográfico (Fotos completas o PDF)</div>
+          <div class="foto-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div class="foto-box">
+              <div style="font-size:0.75rem; font-weight:700; margin-bottom:4px;">Fachada (Click para ampliar)</div>
+              <input type="file" accept="image/*,.pdf" style="font-size:0.7rem;" onchange="guardarArchivo(event, '${v.id}', 'fachada')">
+              <div id="ph_${v.id}_fachada" style="font-size:0.75rem; color:#94a3b8; margin-top:10px;">Sin archivo</div>
+              <img id="img_${v.id}_fachada" alt="Fachada" title="Haz clic para ver imagen completa">
+              <a id="pdf_${v.id}_fachada" target="_blank" style="display:none; margin-top:10px; font-size:0.8rem; color:#00539f; font-weight:bold;">📄 Ver Documento PDF</a>
+              <iframe id="visorPdf_${v.id}_fachada" title="Vista previa PDF fachada" style="display:none; width:100%; height:260px; margin-top:10px; border:1px solid #cbd5e1; border-radius:6px; background:white;" loading="lazy"></iframe>
+              <button id="btn_${v.id}_fachada" style="display:none; margin-top:6px; background:#dc2626; color:white; border:none; padding:3px 6px; border-radius:4px; font-size:0.7rem; cursor:pointer;" onclick="eliminarArchivo('${v.id}', 'fachada')">Eliminar</button>
+            </div>
+            <div class="foto-box">
+              <div style="font-size:0.75rem; font-weight:700; margin-bottom:4px;">Interior (Click para ampliar)</div>
+              <input type="file" accept="image/*,.pdf" style="font-size:0.7rem;" onchange="guardarArchivo(event, '${v.id}', 'interior')">
+              <div id="ph_${v.id}_interior" style="font-size:0.75rem; color:#94a3b8; margin-top:10px;">Sin archivo</div>
+              <img id="img_${v.id}_interior" alt="Interior" title="Haz clic para ver imagen completa">
+              <a id="pdf_${v.id}_interior" target="_blank" style="display:none; margin-top:10px; font-size:0.8rem; color:#00539f; font-weight:bold;">📄 Ver Documento PDF</a>
+              <iframe id="visorPdf_${v.id}_interior" title="Vista previa PDF interior" style="display:none; width:100%; height:260px; margin-top:10px; border:1px solid #cbd5e1; border-radius:6px; background:white;" loading="lazy"></iframe>
+              <button id="btn_${v.id}_interior" style="display:none; margin-top:6px; background:#dc2626; color:white; border:none; padding:3px 6px; border-radius:4px; font-size:0.7rem; cursor:pointer;" onclick="eliminarArchivo('${v.id}', 'interior')">Eliminar</button>
+            </div>
+            <div class="foto-box">
+              <div style="font-size:0.75rem; font-weight:700; margin-bottom:4px;">Área a intervenir (Click para ampliar)</div>
+              <input type="file" accept="image/*,.pdf" style="font-size:0.7rem;" onchange="guardarArchivo(event, '${v.id}', 'intervenir')">
+              <div id="ph_${v.id}_intervenir" style="font-size:0.75rem; color:#94a3b8; margin-top:10px;">Sin archivo</div>
+              <img id="img_${v.id}_intervenir" alt="Intervenir" title="Haz clic para ver imagen completa">
+              <a id="pdf_${v.id}_intervenir" target="_blank" style="display:none; margin-top:10px; font-size:0.8rem; color:#00539f; font-weight:bold;">📄 Ver Documento PDF</a>
+              <iframe id="visorPdf_${v.id}_intervenir" title="Vista previa PDF intervenir" style="display:none; width:100%; height:260px; margin-top:10px; border:1px solid #cbd5e1; border-radius:6px; background:white;" loading="lazy"></iframe>
+              <button id="btn_${v.id}_intervenir" style="display:none; margin-top:6px; background:#dc2626; color:white; border:none; padding:3px 6px; border-radius:4px; font-size:0.7rem; cursor:pointer;" onclick="eliminarArchivo('${v.id}', 'intervenir')">Eliminar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Diagnóstico Técnico -->
+        <div class="seccion">
+          <div class="seccion-titulo">4. Diagnóstico Técnico</div>
+          <div class="foto-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="campo" style="grid-column: span 2;"><div class="etiqueta">Principales deficiencias identificadas</div><input type="text" id="def_${v.id}" value="${c.deficiencias}"></div>
+            <div class="campo"><div class="etiqueta">Estado de pisos, paredes y techos</div><input type="text" id="obsPar_${v.id}" value="${c.obsParedes}"></div>
+            <div class="campo"><div class="etiqueta">Observaciones técnicas</div><input type="text" id="obsTec_${v.id}" value="Requiere intervención prioritaria"></div>
+          </div>
+        </div>
+
+        <!-- 5. Factores de Riesgo para Malaria -->
+        <div class="seccion">
+          <div class="seccion-titulo">5. Factores de Riesgo para Malaria</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <div class="campo">
+              <div class="etiqueta">Presencia de aberturas en paredes</div>
+              <select id="ab_${v.id}"><option value="Sí" ${c.aberturas==='Sí'?'selected':''}>Sí</option><option value="No" ${c.aberturas==='No'?'selected':''}>No</option></select>
+            </div>
+            <div class="campo">
+              <div class="etiqueta">Estado del techo</div>
+              <select id="estTecho_${v.id}"><option value="Bueno" ${c.estadoTecho==='Bueno'?'selected':''}>Bueno</option><option value="Regular" ${c.estadoTecho==='Regular'?'selected':''}>Regular</option><option value="Malo" ${c.estadoTecho==='Malo'?'selected':''}>Malo</option></select>
+            </div>
+            <div class="campo">
+              <div class="etiqueta">Ventanas sin protección o mallas</div>
+              <select id="ven_${v.id}"><option value="Sí" ${c.ventanasSinMalla==='Sí'?'selected':''}>Sí</option><option value="No" ${c.ventanasSinMalla==='No'?'selected':''}>No</option></select>
+            </div>
+            <div class="campo">
+              <div class="etiqueta">Acumulación de agua alrededor</div>
+              <select id="agua_${v.id}"><option value="Sí" ${c.aguaAlrededor==='Sí'?'selected':''}>Sí</option><option value="No" ${c.aguaAlrededor==='No'?'selected':''}>No</option></select>
+            </div>
+            <div class="campo">
+              <div class="etiqueta">Nivel de riesgo identificado</div>
+              <select id="riesgo_${v.id}"><option value="Alto" ${c.nivelRiesgo==='Alto'?'selected':''}>Alto</option><option value="Medio" ${c.nivelRiesgo==='Medio'?'selected':''}>Medio</option><option value="Bajo" ${c.nivelRiesgo==='Bajo'?'selected':''}>Bajo</option></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Propuesta de Intervención -->
+        <div class="seccion">
+          <div class="seccion-titulo">6. Propuesta de Intervención</div>
+          <div class="campo" style="margin-bottom: 15px;"><div class="etiqueta">Descripción de las mejoras propuestas</div><textarea id="prop_${v.id}" rows="2">${c.propuesta}</textarea></div>
+          <div class="foto-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="foto-box">
+              <div style="font-size:0.75rem; font-weight:700; margin-bottom:4px;">Plano actual (Click para ampliar)</div>
+              <input type="file" accept="image/*,.pdf" style="font-size:0.7rem;" onchange="guardarArchivo(event, '${v.id}', 'planoActual')">
+              <div id="ph_${v.id}_planoActual" style="font-size:0.75rem; color:#94a3b8; margin-top:10px;">Sin archivo</div>
+              <img id="img_${v.id}_planoActual" alt="Plano Actual" title="Haz clic para ver imagen completa">
+              <a id="pdf_${v.id}_planoActual" target="_blank" style="display:none; margin-top:10px; font-size:0.8rem; color:#00539f; font-weight:bold;">📄 Ver Documento PDF</a>
+              <iframe id="visorPdf_${v.id}_planoActual" title="Vista previa PDF planoActual" style="display:none; width:100%; height:260px; margin-top:10px; border:1px solid #cbd5e1; border-radius:6px; background:white;" loading="lazy"></iframe>
+              <button id="btn_${v.id}_planoActual" style="display:none; margin-top:6px; background:#dc2626; color:white; border:none; padding:3px 6px; border-radius:4px; font-size:0.7rem; cursor:pointer;" onclick="eliminarArchivo('${v.id}', 'planoActual')">Eliminar</button>
+            </div>
+            <div class="foto-box">
+              <div style="font-size:0.75rem; font-weight:700; margin-bottom:4px;">Plano de intervención (Click para ampliar)</div>
+              <input type="file" accept="image/*,.pdf" style="font-size:0.7rem;" onchange="guardarArchivo(event, '${v.id}', 'planoIntervencion')">
+              <div id="ph_${v.id}_planoIntervencion" style="font-size:0.75rem; color:#94a3b8; margin-top:10px;">Sin archivo</div>
+              <img id="img_${v.id}_planoIntervencion" alt="Plano Intervención" title="Haz clic para ver imagen completa">
+              <a id="pdf_${v.id}_planoIntervencion" target="_blank" style="display:none; margin-top:10px; font-size:0.8rem; color:#00539f; font-weight:bold;">📄 Ver Documento PDF</a>
+              <iframe id="visorPdf_${v.id}_planoIntervencion" title="Vista previa PDF planoIntervencion" style="display:none; width:100%; height:260px; margin-top:10px; border:1px solid #cbd5e1; border-radius:6px; background:white;" loading="lazy"></iframe>
+              <button id="btn_${v.id}_planoIntervencion" style="display:none; margin-top:6px; background:#dc2626; color:white; border:none; padding:3px 6px; border-radius:4px; font-size:0.7rem; cursor:pointer;" onclick="eliminarArchivo('${v.id}', 'planoIntervencion')">Eliminar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Presupuesto -->
+        <div class="seccion">
+          <div class="seccion-titulo">7. Presupuesto</div>
+          <table class="tabla-presupuesto">
+            <thead><tr><th>Componente</th><th style="width:180px; text-align:right;">Monto (Bs.)</th></tr></thead>
+            <tbody>
+              <tr><td>Materiales</td><td><input type="number" id="mat_${v.id}" value="${p.mat}" oninput="calcularTotal('${v.id}')"></td></tr>
+              <tr><td>Mano de obra</td><td><input type="number" id="mo_${v.id}" value="${p.mo}" oninput="calcularTotal('${v.id}')"></td></tr>
+              <tr><td>Equipo, maquinaria y herramientas</td><td><input type="number" id="eq_${v.id}" value="${p.eq}" oninput="calcularTotal('${v.id}')"></td></tr>
+              <tr><td>Gastos generales y administrativos</td><td><input type="number" id="gg_${v.id}" value="${p.gg}" oninput="calcularTotal('${v.id}')"></td></tr>
+              <tr><td>Utilidad</td><td><input type="number" id="util_${v.id}" value="${p.util}" oninput="calcularTotal('${v.id}')"></td></tr>
+              <tr><td>Impuestos</td><td><input type="number" id="imp_${v.id}" value="${p.imp}" oninput="calcularTotal('${v.id}')"></td></tr>
+              <tr class="fila-total"><td>Total general</td><td style="text-align:right;" id="total_${v.id}">${totalGeneral} Bs.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 8. Validación -->
+        <div class="seccion">
+          <div class="seccion-titulo">8. Validación</div>
+          <div class="firmas" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px;">
+            <div class="campo"><div class="etiqueta">Nombre y firma del beneficiario</div><input type="text" id="firmaBeneficiario_${v.id}" value="${escaparHTML(validacion.beneficiario)}" placeholder="Nombre completo del beneficiario" oninput="guardarValidacion('${v.id}')"><small style="display:block;color:#64748b;margin-top:5px;">Escriba el nombre; la firma manuscrita puede añadirse al imprimir.</small></div>
+            <div class="campo"><div class="etiqueta">Nombre y firma del técnico responsable</div><input type="text" id="firmaTecnico_${v.id}" value="${escaparHTML(validacion.tecnico)}" placeholder="Nombre completo del técnico" oninput="guardarValidacion('${v.id}')"><small style="display:block;color:#64748b;margin-top:5px;">Escriba el nombre; la firma manuscrita puede añadirse al imprimir.</small></div>
+            <div class="campo"><div class="etiqueta">Fecha de aprobación</div><input type="date" id="fechaAprobacion_${v.id}" value="${escaparHTML(validacion.fechaISO)}" onchange="guardarValidacion('${v.id}')"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Cargar todos los archivos almacenados
+  cargarVistaPrevia(v.id, 'fachada');
+  cargarVistaPrevia(v.id, 'interior');
+  cargarVistaPrevia(v.id, 'intervenir');
+  cargarVistaPrevia(v.id, 'planoActual');
+  cargarVistaPrevia(v.id, 'planoIntervencion');
+}
+
+function filtrarGral() {
+  const texto = document.getElementById("busqueda").value.toLowerCase().trim();
+  const barrioSel = document.getElementById("filtroBarrio").value;
+
+  const filtradas = viviendas.filter(v => {
+    const datos = obtenerDatosGuardados(v);
+    const coincideTexto = datos.c.jefe.toLowerCase().includes(texto) || 
+                          datos.c.id.toLowerCase().includes(texto) || 
+                          datos.c.barrio.toLowerCase().includes(texto);
+    const coincideBarrio = barrioSel === "" || datos.c.barrio === barrioSel;
+    return coincideTexto && coincideBarrio;
+  });
+
+  renderizarSidebar(filtradas);
+  actualizarMapa(filtradas);
+  renderizarFichaActiva();
+}
+
+function escaparHTML(valor) {
+  return String(valor ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function fechaISOaTexto(fechaISO) {
+  if (!fechaISO) return "";
+  const partes = fechaISO.split("-");
+  return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : fechaISO;
+}
+
+function obtenerValidacion(v) {
+  const base = { beneficiario: v.jefe || "Gabriela Ortiz Gonzales", tecnico: v.encuestador || "Edward Gonçalves", fechaISO: "2026-10-23" };
+  try {
+    const guardado = JSON.parse(localStorage.getItem(`validacion_${v.id}`) || "null");
+    if (guardado) return { ...base, ...guardado };
+  } catch (e) {}
+  // La vivienda RIB-002 se inicializa con los nombres y fecha indicados por el usuario.
+  if (v.id === "RIB-002") return { beneficiario: "Gabriela Ortiz Gonzales", tecnico: "Edward Gonçalves", fechaISO: "2026-10-23" };
+  return base;
+}
+
+function guardarValidacion(id) {
+  const v = viviendas.find(item => item.id === id);
+  if (!v) return;
+  const beneficiarioEl = document.getElementById(`firmaBeneficiario_${id}`);
+  const tecnicoEl = document.getElementById(`firmaTecnico_${id}`);
+  const fechaEl = document.getElementById(`fechaAprobacion_${id}`);
+  if (!beneficiarioEl || !tecnicoEl || !fechaEl) return;
+  localStorage.setItem(`validacion_${id}`, JSON.stringify({
+    beneficiario: beneficiarioEl.value,
+    tecnico: tecnicoEl.value,
+    fechaISO: fechaEl.value
+  }));
+}
+
+async function exportarExcel() {
+  if (typeof ExcelJS === "undefined") {
+    alert("No se pudo cargar el componente para incrustar fotos en Excel. Verifica tu conexión a Internet e inténtalo nuevamente.");
+    return;
+  }
+  const boton = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Descargar Excel'));
+  const textoOriginal = boton ? boton.textContent : '';
+  if (boton) { boton.disabled = true; boton.textContent = '⏳ Preparando Excel con fotografías...'; }
+  try {
+    const libro = new ExcelJS.Workbook();
+    libro.creator = 'PC Vida Beni';
+    libro.created = new Date();
+
+    const hoja = libro.addWorksheet('Fichas técnicas', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const filas = viviendas.map(v => {
+      const datos = obtenerDatosGuardados(v);
+      const c = datos.c || {};
+      const p = datos.p || {};
+      const val = obtenerValidacion(v);
+      const num = x => Number.parseFloat(x) || 0;
+      const total = num(p.mat) + num(p.mo) + num(p.eq) + num(p.gg) + num(p.util) + num(p.imp);
+      const adjunto = tipo => localStorage.getItem(`foto_${v.id}_${tipo}`) ? "Sí" : "No";
+      return {
+        "Código de vivienda": c.id || v.id,
+        "Nombre del jefe(a) de hogar": c.jefe || "",
+        "Integrantes del hogar": c.integrantes || "",
+        "Teléfono": c.celular || "",
+        "Barrio/Comunidad": c.barrio || "",
+        "Latitud GPS": datos.lat ?? "",
+        "Longitud GPS": datos.lon ?? "",
+        "Material de piso": c.piso || "",
+        "Material de paredes": c.paredes || "",
+        "Material de techo": c.techo || "",
+        "Ambientes": c.ambientes ?? "",
+        "Estado general": c.estadoGeneral || "",
+        "Deficiencias": c.deficiencias || "",
+        "Observaciones de paredes": c.obsParedes || "",
+        "Aberturas": c.aberturas || "",
+        "Estado del techo": c.estadoTecho || "",
+        "Ventanas sin malla": c.ventanasSinMalla || "",
+        "Agua alrededor": c.aguaAlrededor || "",
+        "Nivel de riesgo": c.nivelRiesgo || "",
+        "Propuesta de intervención": c.propuesta || "",
+        "Técnico/Encuestador": c.encuestador || v.encuestador || "",
+        "Materiales (Bs)": num(p.mat), "Mano de obra (Bs)": num(p.mo),
+        "Equipos y herramientas (Bs)": num(p.eq), "Gastos generales (Bs)": num(p.gg),
+        "Utilidad (Bs)": num(p.util), "Impuestos (Bs)": num(p.imp), "Total presupuesto (Bs)": total,
+        "Nombre y firma del beneficiario": val.beneficiario || "",
+        "Nombre y firma del técnico responsable": val.tecnico || "",
+        "Fecha de aprobación": fechaISOaTexto(val.fechaISO),
+        "Foto de fachada adjunta": adjunto("fachada"), "Foto interior adjunta": adjunto("interior"),
+        "Foto área a intervenir adjunta": adjunto("intervenir"), "Plano actual adjunto": adjunto("planoActual"),
+        "Plano de intervención adjunto": adjunto("planoIntervencion")
+      };
+    });
+    if (filas.length) {
+      hoja.columns = Object.keys(filas[0]).map(k => ({ header: k, key: k, width: Math.min(Math.max(k.length + 3, 16), 36) }));
+      filas.forEach(f => hoja.addRow(f));
+    }
+    hoja.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    hoja.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00539F' } };
+    hoja.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, filas.length + 1), column: hoja.columnCount || 1 } };
+    hoja.eachRow((row, n) => { if (n > 1) row.alignment = { vertical: 'top', wrapText: true }; });
+
+    // Hoja aparte con las fotografías reales incrustadas dentro del .xlsx.
+    const hojaFotos = libro.addWorksheet('Fotos por vivienda', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const tiposFotos = [
+      { tipo: 'fachada', titulo: 'Foto de fachada' },
+      { tipo: 'interior', titulo: 'Foto interior' },
+      { tipo: 'intervenir', titulo: 'Área a intervenir' },
+      { tipo: 'planoActual', titulo: 'Plano actual (imagen)' },
+      { tipo: 'planoIntervencion', titulo: 'Plano de intervención (imagen)' }
+    ];
+    hojaFotos.columns = [
+      { header: 'Código de vivienda', key: 'codigo', width: 18 },
+      { header: 'Beneficiario', key: 'beneficiario', width: 30 },
+      ...tiposFotos.map((t, i) => ({ header: t.titulo, key: `foto${i}`, width: 25 }))
+    ];
+    hojaFotos.getRow(1).height = 32;
+    hojaFotos.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    hojaFotos.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF00539F' } };
+    let fotosIncrustadas = 0;
+    let pdfsEncontrados = 0;
+    viviendas.forEach((v, idx) => {
+      const datos = obtenerDatosGuardados(v);
+      const filaExcel = idx + 2;
+      const row = hojaFotos.addRow({ codigo: (datos.c && datos.c.id) || v.id, beneficiario: (datos.c && datos.c.jefe) || '' });
+      row.height = 88;
+      row.alignment = { vertical: 'middle', wrapText: true };
+      tiposFotos.forEach((item, j) => {
+        const dataUrl = localStorage.getItem(`foto_${v.id}_${item.tipo}`);
+        if (!dataUrl) {
+          row.getCell(j + 3).value = 'Sin archivo';
+          return;
+        }
+        if (dataUrl.startsWith('data:application/pdf')) {
+          row.getCell(j + 3).value = 'PDF adjunto (no se puede incrustar como foto; revisar visor de la ficha)';
+          pdfsEncontrados++;
+          return;
+        }
+        const match = dataUrl.match(/^data:image\/(png|jpe?g|gif|webp);base64,/i);
+        if (!match) {
+          row.getCell(j + 3).value = 'Archivo adjunto, formato no compatible para incrustar';
+          return;
+        }
+        let extension = match[1].toLowerCase();
+        if (extension === 'jpg') extension = 'jpeg';
+        // Excel admite PNG/JPEG; convertimos cualquier formato restante si fuera necesario.
+        if (extension === 'gif' || extension === 'webp') {
+          row.getCell(j + 3).value = 'Imagen en formato no compatible; vuelva a subirla como JPG o PNG';
+          return;
+        }
+        const imageId = libro.addImage({ base64: dataUrl, extension });
+        hojaFotos.addImage(imageId, {
+          tl: { col: j + 2, row: filaExcel - 1 },
+          br: { col: j + 3, row: filaExcel },
+          editAs: 'oneCell'
+        });
+        fotosIncrustadas++;
+      });
+    });
+    hojaFotos.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, viviendas.length + 1), column: 2 + tiposFotos.length } };
+    const buffer = await libro.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Fichas_Tecnicas_PC_Vida_con_fotografias.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    alert(`Excel descargado. Fotografías incrustadas: ${fotosIncrustadas}. PDF encontrados: ${pdfsEncontrados}. Los PDF se indican en la hoja "Fotos por vivienda", pero no se incrustan como imágenes.`);
+  } catch (error) {
+    console.error(error);
+    alert('No se pudo crear el Excel con fotografías. Comprueba que haya conexión a Internet y que los archivos estén guardados en este navegador. Detalle: ' + (error && error.message ? error.message : error));
+  } finally {
+    if (boton) { boton.disabled = false; boton.textContent = textoOriginal || '📗 Descargar Excel (.xlsx)'; }
+  }
+}
+
+function exportarCSV() {
+  // Exporta todos los campos de todas las viviendas, incluyendo presupuesto y estado de adjuntos.
+  const columnas = [
+    "ID", "Jefe de hogar", "Integrantes", "Teléfono", "Barrio", "Latitud", "Longitud",
+    "Tipo de piso", "Material de paredes", "Material de techo", "Cantidad de ambientes",
+    "Estado general", "Deficiencias", "Observaciones de paredes", "Aberturas",
+    "Estado del techo", "Ventanas sin malla", "Agua alrededor de la vivienda", "Nivel de riesgo",
+    "Propuesta de intervención", "Encuestador", "Materiales (Bs)", "Mano de obra (Bs)",
+    "Equipos (Bs)", "Gastos generales (Bs)", "Utilidad (Bs)", "Impuestos (Bs)", "Total presupuesto (Bs)",
+    "Foto fachada", "Foto interior", "Foto área a intervenir", "Plano actual", "Plano de intervención", "Firma beneficiario", "Firma técnico responsable", "Fecha de aprobación"
+  ];
+
+  const tiposAdjuntos = ["fachada", "interior", "intervenir", "planoActual", "planoIntervencion"];
+  const valoresAdjuntos = ["Foto fachada", "Foto interior", "Foto área a intervenir", "Plano actual", "Plano de intervención"];
+  const escaparCSV = valor => {
+    if (valor === null || valor === undefined) valor = "";
+    if (typeof valor === "object") valor = JSON.stringify(valor);
+    return '"' + String(valor).replace(/"/g, '""').replace(/\r?\n/g, " ") + '"';
+  };
+
+  const filas = [columnas];
+  viviendas.forEach(v => {
+    const datos = obtenerDatosGuardados(v);
+    const c = datos.c || {};
+    const p = datos.p || {};
+    const numero = x => Number.parseFloat(x) || 0;
+    const total = numero(p.mat) + numero(p.mo) + numero(p.eq) + numero(p.gg) + numero(p.util) + numero(p.imp);
+    const fila = [
+      c.id ?? v.id, c.jefe, c.integrantes, c.celular, c.barrio, datos.lat, datos.lon,
+      c.piso, c.paredes, c.techo, c.ambientes, c.estadoGeneral, c.deficiencias, c.obsParedes,
+      c.aberturas, c.estadoTecho, c.ventanasSinMalla, c.aguaAlrededor, c.nivelRiesgo, c.propuesta,
+      c.encuestador || v.encuestador || "", numero(p.mat).toFixed(2), numero(p.mo).toFixed(2),
+      numero(p.eq).toFixed(2), numero(p.gg).toFixed(2), numero(p.util).toFixed(2),
+      numero(p.imp).toFixed(2), total.toFixed(2)
+    ];
+    tiposAdjuntos.forEach((tipo) => {
+      const archivo = localStorage.getItem(`foto_${v.id}_${tipo}`);
+      fila.push(archivo ? "Sí" : "No");
+    });
+    const validacion = obtenerValidacion(v);
+    fila.push(validacion.beneficiario, validacion.tecnico, fechaISOaTexto(validacion.fechaISO));
+    filas.push(fila);
+  });
+
+  // BOM para que Excel reconozca correctamente tildes y caracteres en español.
+  const csv = "\uFEFF" + filas.map(fila => fila.map(escaparCSV).join(";")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "Fichas_Tecnicas_PC_Vida_completo.csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  alert(`Exportación lista: ${viviendas.length} viviendas. El CSV incluye los datos técnicos, presupuesto y si cada adjunto está guardado. Las fotos y PDF no se incrustan dentro del CSV.`);
+}
+
+// Inicialización
+filtrarGral();
+if (window.matchMedia('(max-width: 900px)').matches) mostrarVistaMovil('ficha');
+setTimeout(() => { map.invalidateSize(); }, 300);
+</script>
+</body>
+</html>
